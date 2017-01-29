@@ -31,63 +31,30 @@ ES_SYSTEMS_CFG=
 FAILED_SYSTEMS=()
 SUCCEEDED_SYSTEMS=()
 
-# --theme
+
+
+# settings variables ########################################################
+
 THEME=
-
-# --extension
 EXT="png"
-
-# --show-timeout
 SHOW_TIMEOUT=5
-
-# --no-ask
 NO_ASK=0
-
-# --loading-text
 LOADING_TEXT="NOW LOADING"
-
-# --press-button-text
 PRESS_BUTTON_TEXT="PRESS A BUTTON TO CONFIGURE LAUNCH OPTIONS"
-
-# --loading-text-color
 LOADING_TEXT_COLOR="white"
-
-# --press-button-text-color
 PRESS_BUTTON_TEXT_COLOR="gray50"
-
-# --no-logo
 NO_LOGO="0"
-
-# --all-systems
 ALL_SYSTEMS="0"
-
-# --destination-dir
 DESTINATION_DIR="$CONFIGS"
-
-# --system
 SYSTEMS_ARRAY=()
-
-# --solid-bg-color
 SOLID_BG_COLOR=
 SOLID_BG_COLOR_FLAG=
-
-# --logo-belt
-LOGO_BELT="0"
-
-# --loading-text-belt
-LOADING_TEXT_BELT="0"
-
-# --press-button-text-belt
-PRESS_BUTTON_TEXT_BELT="0"
-
-# --es-view
-ES_VIEW=
-
-# --logo-color
-LOGO_COLOR=
-
-# --logo-belt-color
-LOGO_BELT_COLOR=
+# TODO: implement these
+#LOGO_BELT="0"
+#LOADING_TEXT_BELT="0"
+#PRESS_BUTTON_TEXT_BELT="0"
+#ES_VIEW=
+#LOGO_COLOR=
 
 
 
