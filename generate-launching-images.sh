@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # generate-launching-images.sh
 ##############################
 #
@@ -314,12 +315,22 @@ function show_image() {
     # if we are running under X use feh otherwise try to use fbi
     # TODO: display the image until user press enter (no timeout)
     if [[ -n "$DISPLAY" ]]; then
-        feh -F -N -Z -Y -q "$image" & &>/dev/null
-        local pid=$!
-        sleep "$SHOW_TIMEOUT"
-        kill -SIGINT "$pid" 2>/dev/null
+        feh \
+          --cycle-once \
+          --hide-pointer \
+          --fullscreen \
+          --auto-zoom \
+          --no-menus \
+          --slideshow-delay $SHOW_TIMEOUT \
+          --quiet \
+          "$image"
     else
-        fbi -1 -t "$SHOW_TIMEOUT" -noverbose -a "$image" </dev/tty &>/dev/null
+        fbi \
+          --once \
+          --timeout "$SHOW_TIMEOUT" \
+          --noverbose \
+          --autozoom \
+          "$image" </dev/tty &>/dev/null
     fi
 }
 
@@ -622,7 +633,7 @@ trap safe_exit SIGHUP SIGINT SIGQUIT SIGKILL SIGTERM
 
 check_dep
 
-get_options $@
+get_options "$@"
 
 if ! get_systems; then
     echo "ERROR: failed to get the installed systems!" >&2
