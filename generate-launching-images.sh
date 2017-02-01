@@ -51,8 +51,8 @@ DESTINATION_DIR="$CONFIGS"
 SYSTEMS_ARRAY=()
 SOLID_BG_COLOR=
 SOLID_BG_COLOR_FLAG=
+LOGO_BELT="0"
 # TODO: implement these
-#LOGO_BELT="0"
 #LOADING_TEXT_BELT="0"
 #PRESS_BUTTON_TEXT_BELT="0"
 #ES_VIEW=
@@ -220,7 +220,11 @@ function get_options() {
             NO_LOGO="1"
             ;;
 
-#H --destination-dir DIR        Put the created images in DIR directory tree
+#H --logo-belt                  Put a semi-transparent white belt behind the logo.
+        --logo-belt)
+            LOGO_BELT="1"
+            ;;
+#H --destination-dir DIR        Save the created images in DIR directory tree
 #H                              (default: /opt/retropie/configs/).
         --destination-dir)
             check_argument "$1" "$2" || exit 1
@@ -381,16 +385,13 @@ function get_data_from_theme_xml() {
 
     case "$1" in
     "background")
-#        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/path"
-        xml_path="/theme/view[contains(@name,'system')]/image[@extra='true']/path"
+        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/path"
         ;;
     "tile")
-#        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/tile"
-        xml_path="/theme/view[contains(@name,'system')]/image[@extra='true']/tile"
+        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/tile"
         ;;
     "bg_color")
-#        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/color"
-        xml_path="/theme/view[contains(@name,'system')]/image[@extra='true']/color"
+        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/color"
         ;;
     "logo")
         xml_path="/theme/view[contains(@name,'detailed')]/image[@name='logo']/path"
@@ -422,7 +423,7 @@ function get_data_from_theme_xml() {
         data=$(
             xmlstarlet sel -t -v \
               "$xml_path" \
-              "$xml_file" | head -1 2> /dev/null
+              "$xml_file" 2> /dev/null
         )
 
         [[ -n "$data" ]] && break
@@ -576,8 +577,16 @@ function prepare_background() {
         convert_cmd+=(-resize 'x576' " ") # the trailing space is needed
     fi
     
-    ${convert_cmd[@]}"$background" "$TMP_LAUNCHING"
-    return $?
+    ${convert_cmd[@]}"$background" "$TMP_LAUNCHING" || return $?
+
+    if [[ "$LOGO_BELT" = "1" ]]; then
+        convert "$TMP_LAUNCHING" \
+          -fill white \
+          -gravity center \
+          -region '1024x190' \
+          -colorize 40,40,40 \
+          "$TMP_LAUNCHING"
+    fi
 }
 
 
