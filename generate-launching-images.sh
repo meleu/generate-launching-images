@@ -12,18 +12,17 @@
 # - the imagemagick package installed (it means 26.1 MB of disk space used).
 #
 # TODO: 
-# - --logo-belt
+# - check every <include>d file and dump in a big temporary xml file.
 # - --loading-text-belt
 # - --press-button-text-belt
 # - --es-view
 # - --logo-color
-# - --all-systems
 # - --ratio
 
 # globals ###################################################################
 
 readonly ES_DIR=("$HOME/.emulationstation" "/etc/emulationstation")
-readonly CONFIGS="/opt/retropie/configs"
+readonly CONFIGDIR="/opt/retropie/configs"
 readonly TMP_BACKGROUND="/tmp/background.png"
 readonly TMP_LOGO="/tmp/system_logo.png"
 readonly TMP_LAUNCHING="/tmp/tmp_launching.png"
@@ -31,32 +30,26 @@ readonly FINAL_IMAGE="/tmp/launching"
 THEME_DIR=
 ES_SYSTEMS_CFG=
 FAILED_SYSTEMS=()
-SUCCEEDED_SYSTEMS=()
-
+FAILED_MSGS=()
 
 
 # settings variables ########################################################
 
 THEME=
 EXT="png"
-SHOW_TIMEOUT=5
-NO_ASK=0
 LOADING_TEXT="NOW LOADING"
 PRESS_BUTTON_TEXT="PRESS A BUTTON TO CONFIGURE LAUNCH OPTIONS"
 LOADING_TEXT_COLOR="white"
 PRESS_BUTTON_TEXT_COLOR="gray50"
+DESTINATION_DIR="$CONFIGDIR"
+SHOW_TIMEOUT="5"
+NO_ASK="0"
 NO_LOGO="0"
-ALL_SYSTEMS="0"
-DESTINATION_DIR="$CONFIGS"
+LOGO_BELT="0"
 SYSTEMS_ARRAY=()
+ALL_SYSTEMS_FLAG="0"
 SOLID_BG_COLOR=
 SOLID_BG_COLOR_FLAG=
-LOGO_BELT="0"
-# TODO: implement these
-#LOADING_TEXT_BELT="0"
-#PRESS_BUTTON_TEXT_BELT="0"
-#ES_VIEW=
-#LOGO_COLOR=
 
 
 
@@ -99,6 +92,7 @@ function usage() {
 
 # deal with command line arguments
 function get_options() {
+    local dir
     for dir in "${ES_DIR[@]}"; do
         if [[ -f "$dir/es_systems.cfg" ]]; then
             ES_SYSTEMS_CFG="$dir/es_systems.cfg"
@@ -114,10 +108,6 @@ function get_options() {
             # getting the help message from the comments in this source code
             sed '/^#H /!d; s/^#H //' "$0"
             exit 0
-            ;;
-
-        -v|--verbose)
-            VERBOSE="1"
             ;;
 
 #H -t, --theme THEME            Create launching images based on THEME. This is
@@ -247,6 +237,11 @@ function get_options() {
             SYSTEMS_ARRAY="$1"
             ;;
 
+#H --all-systems                Create image for all systems of the chosen theme.
+        --all-systems)
+            ALL_SYSTEMS_FLAG="1"
+            ;;
+
 #H --show-timeout TIME          Show the created image for TIME seconds before
 #H                              ask if the user accept it (see --no-ask).
         --show-timeout)
@@ -329,7 +324,6 @@ function show_image() {
     local image="$1"
 
     # if we are running under X use feh otherwise try to use fbi
-    # TODO: display the image until user press enter (no timeout)
     if [[ -n "$DISPLAY" ]]; then
         feh \
           --cycle-once \
@@ -355,10 +349,14 @@ function show_image() {
 function get_systems() {
     # interrupt if user explicitly defined the system with --system
     [[ -n "$SYSTEMS_ARRAY" ]] && return 0
-
-    local installed_systems=$(list_systems)
-    [[ -z "$installed_systems" ]] && return 1
-    SYSTEMS_ARRAY=($installed_systems)
+    local system_list
+    if [[ "$ALL_SYSTEMS_FLAG" = "1" ]]; then
+        system_list=$(ls -d "$THEME_DIR"/*/ | xargs basename -a | grep -v 'retropie\|art\|_inc')
+    else
+        system_list=$(list_systems)
+    fi
+    [[ -z "$system_list" ]] && return 1
+    SYSTEMS_ARRAY=($system_list)
 }
 
 
@@ -405,21 +403,24 @@ function get_data_from_theme_xml() {
         ;;
     esac
 
-    system_theme_dir=$(
-        xmlstarlet sel -t -v \
-          "/systemList/system[name='$SYSTEM']/theme" \
-          "$ES_SYSTEMS_CFG"
-    )
-
-    if [[ -z "$system_theme_dir" ]]; then
-        echo "WARNING: \"$SYSTEM\" system not found in $ES_SYSTEMS_CFG" >&2
-        return 1
+    if [[ "$ALL_SYSTEMS_FLAG" = "1" ]]; then
+        system_theme_dir="$SYSTEM"
+    else
+        system_theme_dir=$(
+            xmlstarlet sel -t -v \
+              "/systemList/system[name='$SYSTEM']/theme" \
+              "$ES_SYSTEMS_CFG"
+        )
     fi
 
+    [[ -z "$system_theme_dir" ]] && system_theme_dir="$SYSTEM"
+
     xml_file="$THEME_DIR/$system_theme_dir/theme.xml"
+    [[ -f "$xml_file" ]] || return 2
 
     # dealing with <include>s
-    while [[ -n "$xml_file" ]]; do
+    # TODO: get every <include>d file and dump in a big temporary xml file.
+    while [[ -f "$xml_file" ]]; do
         data=$(
             xmlstarlet sel -t -v \
               "$xml_path" \
@@ -428,9 +429,6 @@ function get_data_from_theme_xml() {
 
         [[ -n "$data" ]] && break
     
-        # TODO: check what's going wrong with the io theme.
-        # if don't find the wanted data on the theme.xml, let's see if there's
-        # some <include>d file in it and look for the data there.
         local included_xml=$(
             xmlstarlet sel -t -v \
               "/theme/include" \
@@ -447,17 +445,20 @@ function get_data_from_theme_xml() {
         return
     fi
     
+    # XXX: it's an ugly workaround!
     # dealing with known issues in themes
     if [[ "$THEME" = "carbon" ]]; then
         if [[ "$1" = "logo" ]]; then
             # due to color problems, we use system3.png for gameandwatch
-            # and system2.png for steam
-            # TODO: deal with the gamecube also...
-            case "$system" in
+            # and system2.png for steam and gamecube (gc).
+            case "$SYSTEM" in
             "gameandwatch")
                 data="${data/%system.svg/system3.svg}"
                 ;;
             "steam")
+                data="${data/%system.svg/system2.svg}"
+                ;;
+            "gc")
                 data="${data/%system.svg/system2.svg}"
                 ;;
             esac
@@ -487,15 +488,15 @@ function proceed() {
         echo    "\"PRESS A BUTTON\" text......: $PRESS_BUTTON_TEXT\n"
         echo    "\"LOADING\" text color.......: $LOADING_TEXT_COLOR\n"
         echo    "\"PRESS A BUTTON\" text color: $PRESS_BUTTON_TEXT_COLOR\n"
-        echo    "Show image timeout.........: $SHOW_TIMEOUT\n"
+
+        [[ "$NO_ASK" = "1" ]] \
+        && echo "Do not ask for confirmation (blindly accept generated images).\n" \
+        || echo "Show image timeout.........: $SHOW_TIMEOUT\n"
 
         [[ "$SOLID_BG_COLOR_FLAG" = "1" ]] \
         && echo "Solid background color.....: ${SOLID_BG_COLOR:-get from the theme}\n"
 
-        [[ "$NO_ASK" = "1" ]] \
-        && echo "Do not ask for confirmation (blindly accept generated images).\n"
-
-        [[ "$NO_LOGO" = "1" ]]  \
+        [[ "$NO_LOGO" = "1" ]] \
         && echo "The images will be created with no system logo.\n"
 
         echo    "Destination directory......: \"$DESTINATION_DIR\"\n"
@@ -517,20 +518,30 @@ function create_launching_image() {
         exit 1
     fi
 
-    rm -f "$TMP_BACKGROUND" "$TMP_LAUNCHING"
+    rm -f "$TMP_BACKGROUND" "$TMP_LOGO" "$TMP_LAUNCHING"
 
-    if ! prepare_background; then
-        echo "WARNING: failed to prepare the background image for \"$SYSTEM\" system!" >&2
+    local ret_val
+    prepare_background
+    ret_val=$?
+    if [[ "$ret_val" -ne 0 ]]; then
+        FAILED_SYSTEMS+=($SYSTEM)
+        if [[ "$ret_val" -eq 2 ]]; then
+            FAILED_MSGS+=("there's no theme.xml for this system")
+        else
+            FAILED_MSGS+=("failed to prepare the background image.")
+        fi
         return 1
     fi
 
     if ! add_logo; then
-        echo "WARNING: failed to add the logo image for \"$SYSTEM\" system!" >&2
+        FAILED_SYSTEMS+=($SYSTEM)
+        FAILED_MSGS+=("failed to add the logo image.")
         return 1
     fi
 
     if ! add_text; then
-        echo "WARNING: failed to add text to the image for \"$SYSTEM\" system!" >&2
+        FAILED_SYSTEMS+=($SYSTEM)
+        FAILED_MSGS+=("failed to add text to the image.")
         return 1
     fi
 
@@ -545,11 +556,11 @@ function create_launching_image() {
 function prepare_background() {
     local background=
     local bg_color=
+    local convert_cmd=(convert)
     local colorize=
 
     # getting the background file
-    background=$(get_data_from_theme_xml background)
-    [[ -z "$background" ]] && return 1
+    background=$(get_data_from_theme_xml background) || return $?
 
     # getting the background color
     if [[ -n "$SOLID_BG_COLOR" ]]; then
@@ -570,7 +581,6 @@ function prepare_background() {
         background="$TMP_BACKGROUND"
     fi
 
-    convert_cmd=(convert)
     if [[ "$(get_data_from_theme_xml tile)" =~ ^[Tt][Rr][Uu][Ee]$ ]]; then
         convert_cmd+=(-size 1024x576 "tile:")
     else
@@ -669,12 +679,11 @@ proceed
 for SYSTEM in ${SYSTEMS_ARRAY[@]}; do
     dialog \
       --title ' Please wait ' \
-      --infobox "Generating launching image for \"$SYSTEM\"" \
-      3 50
+      --infobox "Generating launching image for \"$SYSTEM\"..." \
+      3 60
 
     if ! create_launching_image ; then
         echo "WARNING: The launching image for \"$SYSTEM\" was NOT created." >&2
-        FAILED_SYSTEMS+=($SYSTEM)
         continue
     fi
 
@@ -689,8 +698,8 @@ for SYSTEM in ${SYSTEMS_ARRAY[@]}; do
 
     mkdir -p "$DESTINATION_DIR/$SYSTEM"
     if ! mv "$FINAL_IMAGE.$EXT" "$DESTINATION_DIR/$SYSTEM/launching.$EXT"; then
-        echo "WARNING: unable to put the created image in \"$DESTINATION_DIR/$SYSTEM\"!" >&2
         FAILED_SYSTEMS+=($SYSTEM)
+        FAILED_MSGS+=("unable to put the created image in \"$DESTINATION_DIR/$SYSTEM\".")
         continue
     fi
     case "$EXT" in
@@ -701,13 +710,17 @@ done
 
 
 fail_msg=$(
-    [[ -n "$FAILED_SYSTEMS" ]] \
-    && echo "Failed to create/save image for the following systems: ${FAILED_SYSTEMS[@]}"
+    if [[ -n "$FAILED_SYSTEMS" ]]; then
+        echo "Failed to create image for the following systems:\n"
+        for i in $(seq 0 $[ ${#FAILED_SYSTEMS[@]} - 1 ]); do
+            echo "${FAILED_SYSTEMS[$i]}: ${FAILED_MSGS[$i]}\n"
+        done
+    fi
 )
 
 dialog \
   --title " INFO " \
-  --msgbox "LAUNCHING IMAGES GENERATION COMPLETED!\n\n$fail_msg" \
+  --msgbox "Launching images generation for \"$THEME\" theme completed!\n\n$fail_msg" \
   10 60
 
 safe_exit 0
