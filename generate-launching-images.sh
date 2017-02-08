@@ -99,7 +99,7 @@ function get_options() {
             break
         fi
     done
-    while [[ "$1" ]]; do
+    while [[ -n "$1" ]]; do
         case "$1" in
 
 #H -h, --help                   Print the help message and exit.
@@ -222,8 +222,11 @@ function get_options() {
             DESTINATION_DIR="$1"
 
             mkdir -p "$DESTINATION_DIR"
-            if ! [[ -d "$DESTINATION_DIR" ]]; then
-                echo "ERROR: failed to create \"$DESTINATION_DIR\"."
+            if ! [[ -w "$DESTINATION_DIR" && -x "$DESTINATION_DIR" ]]; then
+                dialog \
+                  --title " ERROR " \
+                  --msgbox "ERROR: '$DESTINATION_DIR': Permission denied" \
+                  6 65
                 exit 1
             fi
             ;;
