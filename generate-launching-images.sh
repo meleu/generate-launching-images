@@ -141,12 +141,27 @@ function get_options() {
             exit
             ;;
 
+#H --system SYSTEM              Create image only for SYSTEM (the default is
+#H                              create for all systems found in es_systems.cfg,
+#H                              see --list-systems).
+        --system)
+            check_argument "$1" "$2" || exit 1
+            shift
+            SYSTEMS_ARRAY="$1"
+            ;;
+
+#H --all-systems                Create image for all systems of the chosen theme.
+        --all-systems)
+            ALL_SYSTEMS_FLAG="1"
+            ;;
+
 #H --list-systems               List the installed systems on your RetroPie
 #H                              (get this info from es_systems.cfg)
         --list-systems)
             list_systems
             exit
             ;;
+
 #H --extension EXT              Set the extension of the created image file
 #H                              (valid options: png|jpg).
         --extension)
@@ -158,12 +173,6 @@ function get_options() {
                 exit 1
             fi
             EXT="$1" 
-            ;;
-
-#H --no-ask                     Do not show the created images and ask for
-#H                              confirmation (blindly accept the created images).
-        --no-ask)
-            NO_ASK="1"
             ;;
 
 #H --loading-text "TEXT"        Set the "LOADING" text (default: "NOW LOADING").
@@ -205,6 +214,12 @@ function get_options() {
             PRESS_BUTTON_TEXT_COLOR="$1"
             ;;
 
+#H --no-ask                     Do not show the created images and ask for
+#H                              confirmation (blindly accept the created images).
+        --no-ask)
+            NO_ASK="1"
+            ;;
+
 #H --no-logo                    Do not put the system logo on the created image.
         --no-logo)
             NO_LOGO="1"
@@ -213,36 +228,6 @@ function get_options() {
 #H --logo-belt                  Put a semi-transparent white belt behind the logo.
         --logo-belt)
             LOGO_BELT="1"
-            ;;
-#H --destination-dir DIR        Save the created images in DIR directory tree
-#H                              (default: /opt/retropie/configs/).
-        --destination-dir)
-            check_argument "$1" "$2" || exit 1
-            shift
-            DESTINATION_DIR="$1"
-
-            mkdir -p "$DESTINATION_DIR"
-            if ! [[ -w "$DESTINATION_DIR" && -x "$DESTINATION_DIR" ]]; then
-                dialog \
-                  --title " ERROR " \
-                  --msgbox "ERROR: '$DESTINATION_DIR': Permission denied" \
-                  6 65
-                exit 1
-            fi
-            ;;
-
-#H --system SYSTEM              Create image only for SYSTEM (the default is
-#H                              create for all systems found in es_systems.cfg,
-#H                              see --list-systems).
-        --system)
-            check_argument "$1" "$2" || exit 1
-            shift
-            SYSTEMS_ARRAY="$1"
-            ;;
-
-#H --all-systems                Create image for all systems of the chosen theme.
-        --all-systems)
-            ALL_SYSTEMS_FLAG="1"
             ;;
 
 #H --show-timeout TIME          Show the created image for TIME seconds before
@@ -262,6 +247,22 @@ function get_options() {
                 shift
             fi
             SOLID_BG_COLOR_FLAG="1"
+            ;;
+
+#H --destination-dir DIR        Save the created images in DIR directory tree.
+        --destination-dir)
+            check_argument "$1" "$2" || exit 1
+            shift
+            DESTINATION_DIR="$1"
+
+            mkdir -p "$DESTINATION_DIR"
+            if ! [[ -w "$DESTINATION_DIR" && -x "$DESTINATION_DIR" ]]; then
+                dialog \
+                  --title " ERROR " \
+                  --msgbox "ERROR: '$DESTINATION_DIR': Permission denied" \
+                  6 65
+                exit 1
+            fi
             ;;
 
         *)
