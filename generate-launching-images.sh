@@ -21,7 +21,11 @@
 
 # globals ###################################################################
 
-readonly ES_DIR=("$HOME/.emulationstation" "/etc/emulationstation")
+user="$SUDO_USER"
+[[ -z "$user" ]] && user="$(id -un)"
+home="$(eval echo ~$user)"
+
+readonly ES_DIR=("$home/.emulationstation" "/etc/emulationstation")
 readonly CONFIGDIR="/opt/retropie/configs"
 readonly TMP_BACKGROUND="/tmp/background.png"
 readonly TMP_LOGO="/tmp/system_logo.png"
@@ -283,9 +287,15 @@ function get_options() {
 
 
 function list_themes() {
-    local dir=
+    local dir
+    local list
     for dir in "${ES_DIR[@]}"; do
-        ls -d "$dir"/themes/*/ | xargs basename -a
+        dir+="/themes"
+        list=$( 
+            find "$dir" -mindepth 1 -maxdepth 1 -type d -regex "$dir/.+" 2>/dev/null \
+            | xargs
+        )
+        [[ -n "$list" ]] && basename -a $list   # "quotes" absence is mandatory
     done
 }
 
@@ -725,6 +735,6 @@ fail_msg=$(
 dialog \
   --title " INFO " \
   --msgbox "Launching images generation for \"$THEME\" theme completed!\n\n$fail_msg" \
-  10 60
+  20 60
 
 safe_exit 0
