@@ -21,6 +21,7 @@
 
 # globals ###################################################################
 
+# avoiding problems when running via sudo
 user="$SUDO_USER"
 [[ -z "$user" ]] && user="$(id -un)"
 home="$(eval echo ~$user)"
