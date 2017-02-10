@@ -294,7 +294,7 @@ function list_themes() {
         dir+="/themes"
         list=$( 
             find "$dir" -mindepth 1 -maxdepth 1 -type d -regex "$dir/.+" 2>/dev/null \
-            | xargs
+            | sort | xargs
         )
         [[ -n "$list" ]] && basename -a $list   # "quotes" absence is mandatory
     done
