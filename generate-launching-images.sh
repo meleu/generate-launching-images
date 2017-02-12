@@ -294,7 +294,7 @@ function list_themes() {
         dir+="/themes"
         list=$( 
             find "$dir" -mindepth 1 -maxdepth 1 -type d -regex "$dir/.+" 2>/dev/null \
-            | xargs
+            | sort | xargs
         )
         [[ -n "$list" ]] && basename -a $list   # "quotes" absence is mandatory
     done
@@ -366,7 +366,7 @@ function get_systems() {
     [[ -n "$SYSTEMS_ARRAY" ]] && return 0
     local system_list
     if [[ "$ALL_SYSTEMS_FLAG" = "1" ]]; then
-        system_list=$(ls -d "$THEME_DIR"/*/ | xargs basename -a | grep -v 'retropie\|art\|_inc')
+        system_list=$(ls -d "$THEME_DIR"/*/ | xargs basename -a | grep -v 'retropie\|art\|_inc\|assets')
     else
         system_list=$(list_systems)
     fi
