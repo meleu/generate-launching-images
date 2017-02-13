@@ -439,7 +439,7 @@ function get_data_from_theme_xml() {
         data=$(
             xmlstarlet sel -t -v \
               "$xml_path" \
-              "$xml_file" 2> /dev/null
+              "$xml_file" 2> /dev/null | head -1
         )
 
         [[ -n "$data" ]] && break
