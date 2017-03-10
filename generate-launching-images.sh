@@ -395,6 +395,8 @@ function get_data_from_theme_xml() {
     local xml_file=
     local data=""
     local dir=
+    local included_xml=()
+    local i=
 
     case "$1" in
     "background")
@@ -444,13 +446,13 @@ function get_data_from_theme_xml() {
 
         [[ -n "$data" ]] && break
     
-        local included_xml=$(
-            xmlstarlet sel -t -v \
-              "/theme/include" \
-              "$xml_file" 2> /dev/null
-        )
-        [[ -z "$included_xml" ]] && return 1
-        xml_file="$(dirname $xml_file)/$included_xml"
+        included_xml=( $(xmlstarlet sel -t -v "/theme/include" "$xml_file" 2> /dev/null) )
+        [[ "${#included_xml[@]}" -eq 0 ]] && return 1
+        for i in "${included_xml[@]}"; do
+            xml_file="$(dirname $xml_file)/$i"
+            data=$(xmlstarlet sel -t -v "$xml_path" "$xml_file" 2> /dev/null | head -1)
+            [[ -n "$data" ]] && break 2
+        done
     done
 
     [[ -z "$data" ]] && return
