@@ -400,7 +400,8 @@ function get_data_from_theme_xml() {
 
     case "$1" in
     "background")
-        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/path"
+        # TODO: find a more elegant way to deal with different names
+        xml_path="/theme/view[contains(@name,'system')]/image[@name='background' or @name='SystemBackground']/path"
         ;;
     "tile")
         xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/tile"
