@@ -410,7 +410,7 @@ function get_data_from_theme_xml() {
         xml_path="/theme/view[contains(@name,'system')]/image[@name='background' or @name='SystemBackground']/color"
         ;;
     "logo")
-        xml_path="/theme/view[contains(@name,'detailed')]/image[@name='logo']/path"
+        xml_path="/theme/view[contains(@name,'detailed') or contains(@name,'system')]/image[@name='logo']/path"
         ;;
     "font")
         xml_path="/theme/view[contains(@name,'detailed')]/textlist/fontPath"
