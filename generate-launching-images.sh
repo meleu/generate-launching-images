@@ -404,10 +404,10 @@ function get_data_from_theme_xml() {
         xml_path="/theme/view[contains(@name,'system')]/image[@name='background' or @name='SystemBackground']/path"
         ;;
     "tile")
-        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/tile"
+        xml_path="/theme/view[contains(@name,'system')]/image[@name='background' or @name='SystemBackground']/tile"
         ;;
     "bg_color")
-        xml_path="/theme/view[contains(@name,'system')]/image[@name='background']/color"
+        xml_path="/theme/view[contains(@name,'system')]/image[@name='background' or @name='SystemBackground']/color"
         ;;
     "logo")
         xml_path="/theme/view[contains(@name,'detailed')]/image[@name='logo']/path"
