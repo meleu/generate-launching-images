@@ -62,7 +62,7 @@ SOLID_BG_COLOR_FLAG=
 
 function safe_exit() {
     rm -f "$TMP_BACKGROUND" "$TMP_LOGO" "$TMP_LAUNCHING" "$FINAL_IMAGE.$EXT"
-    exit $1
+    exit "$1"
 }
 
 
@@ -87,7 +87,7 @@ function check_dep() {
 
 function usage() {
     echo
-    echo "USAGE: $(basename $0) -t theme-name [options]"
+    echo "USAGE: $(basename "$0") -t theme-name [options]"
     echo
     echo "Use '--help' to see all the options"
     echo
@@ -346,7 +346,7 @@ function show_image() {
           --fullscreen \
           --auto-zoom \
           --no-menus \
-          --slideshow-delay $SHOW_TIMEOUT \
+          --slideshow-delay "$SHOW_TIMEOUT" \
           --quiet \
           "$image"
     else
@@ -450,7 +450,7 @@ function get_data_from_theme_xml() {
         included_xml=( $(xmlstarlet sel -t -v "/theme/include" "$xml_file" 2> /dev/null) )
         [[ "${#included_xml[@]}" -eq 0 ]] && return 1
         for i in "${included_xml[@]}"; do
-            xml_file="$(dirname $xml_file)/$i"
+            xml_file="$(dirname "$xml_file")/$i"
             data=$(xmlstarlet sel -t -v "$xml_path" "$xml_file" 2> /dev/null | head -1)
             [[ -n "$data" ]] && break 2
         done
@@ -483,7 +483,7 @@ function get_data_from_theme_xml() {
         fi
     fi
 
-    echo "$(dirname $xml_file)/$data"
+    echo "$(dirname "$xml_file")/$data"
 } # end of get_data_from_theme_xml()
 
 
@@ -694,7 +694,7 @@ fi
 
 proceed
 
-for SYSTEM in ${SYSTEMS_ARRAY[@]}; do
+for SYSTEM in "${SYSTEMS_ARRAY[@]}"; do
     dialog \
       --title ' Please wait ' \
       --infobox "Generating launching image for \"$SYSTEM\"..." \
@@ -730,7 +730,7 @@ done
 fail_msg=$(
     if [[ -n "$FAILED_SYSTEMS" ]]; then
         echo "Failed to create image for the following systems:\n"
-        for i in $(seq 0 $[ ${#FAILED_SYSTEMS[@]} - 1 ]); do
+        for i in $(seq 0 $(( ${#FAILED_SYSTEMS[@]} - 1 )) ); do
             echo "${FAILED_SYSTEMS[$i]}: ${FAILED_MSGS[$i]}\n"
         done
     fi
