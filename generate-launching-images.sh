@@ -32,6 +32,7 @@ readonly TMP_BACKGROUND="/tmp/background.png"
 readonly TMP_LOGO="/tmp/system_logo.png"
 readonly TMP_LAUNCHING="/tmp/tmp_launching.png"
 readonly FINAL_IMAGE="/tmp/launching"
+readonly IS_RUNNING_X="$([[ -n "$DISPLAY" ]] && echo true || echo false )"
 THEME_DIR=
 ES_SYSTEMS_CFG=
 FAILED_SYSTEMS=()
@@ -55,6 +56,8 @@ SYSTEMS_ARRAY=()
 ALL_SYSTEMS_FLAG="0"
 SOLID_BG_COLOR=
 SOLID_BG_COLOR_FLAG=
+WIDTH="1024"
+HEIGHT="576"
 
 
 
@@ -75,10 +78,10 @@ function check_dep() {
         echo "Please install it with 'sudo apt-get install imagemagick'."
         exit 1
     fi
-    # if we are running under X we need feh
-    if [[ -n "$DISPLAY" ]] && ! which feh > /dev/null; then
-        echo "ERROR: The feh package isn't installed!"
-        echo "Please install it with 'sudo apt-get install feh'."
+    # if we are running under X we need feh and xrandr
+    if [[ "$IS_RUNNING_X" == 'true' ]] && ! which feh xrandr > /dev/null; then
+        echo "ERROR: command(s) feh and/or xrandr not found!"
+        echo "Please install them with 'sudo apt-get install feh x11-xserver-utils'."
         exit 1
     fi
 }
@@ -287,6 +290,38 @@ function get_options() {
 
 
 
+function detect_aspect_ratio() {
+    local resolution
+    local width
+    local height
+    local aspectRatio
+
+    # running on X
+    if [[ "$IS_RUNNING_X" == true ]]; then
+        # from https://superuser.com/a/1207339
+        resolution="$(xrandr --current | sed -n 's/.* connected \([0-9]\+\)x\([0-9]\+\)+.*/\1x\2/p')"
+    else # running on a raspi
+        local resFile="/sys/class/graphics/fb0/virtual_size"
+        if [[ -f "$resFile" ]]; then
+            resolution="$(tr , x < "$resFile")"
+        else
+            resolution="$(fbset -s | grep -oE '[0-9]+x[0-9]+')"
+        fi
+    fi
+
+    # if unable to detect the resolution, just use the default ones
+    [[ "$resolution" =~ [0-9]+x[0-9]+ ]] && return
+
+    width="$(cut -d 'x' -f1 <<< "$resolution")"
+    height="$(cut -d 'x' -f2 <<< "$resolution")"
+    aspectRatio="$(( $width * 10 / $height ))" # no quotes is mandatory!
+
+    # an aspecRatio = 13 means 4:3
+    [[ "$aspectRatio" == "13" ]] && WIDTH="768"
+}
+
+
+
 function list_themes() {
     local dir
     local list
@@ -339,7 +374,7 @@ function show_image() {
     local image="$1"
 
     # if we are running under X use feh otherwise try to use fbi
-    if [[ -n "$DISPLAY" ]]; then
+    if [[ "$IS_RUNNING_X" == 'true' ]]; then
         feh \
           --cycle-once \
           --hide-pointer \
@@ -491,6 +526,7 @@ function get_data_from_theme_xml() {
 function proceed() {
     local number_of_systems=$(echo "${SYSTEMS_ARRAY[@]}" | wc -w)
     local msg=$(
+        echo    "Destination directory......: \"$DESTINATION_DIR\"\n"
         echo    "Theme......................: $THEME\n"
         echo    "System.....................: $( 
             if [[ "$number_of_systems" != 1 ]]; then 
@@ -503,8 +539,8 @@ function proceed() {
 
         echo    "Image extension............: $EXT\n"
         echo    "\"LOADING\" text.............: $LOADING_TEXT\n"
-        echo    "\"PRESS A BUTTON\" text......: $PRESS_BUTTON_TEXT\n"
         echo    "\"LOADING\" text color.......: $LOADING_TEXT_COLOR\n"
+        echo    "\"PRESS A BUTTON\" text......: $PRESS_BUTTON_TEXT\n"
         echo    "\"PRESS A BUTTON\" text color: $PRESS_BUTTON_TEXT_COLOR\n"
 
         [[ "$NO_ASK" = "1" ]] \
@@ -517,7 +553,8 @@ function proceed() {
         [[ "$NO_LOGO" = "1" ]] \
         && echo "The images will be created with no system logo.\n"
 
-        echo    "Destination directory......: \"$DESTINATION_DIR\"\n"
+        [[ "$LOGO_BELT" = "1" ]] \
+        && echo "Put a semitransparent horizontal belt behind the system logo.\n"
 
         echo "\n\nDO YOU WANT TO PROCEED?\n"
     )
@@ -600,9 +637,9 @@ function prepare_background() {
     fi
 
     if [[ "$(get_data_from_theme_xml tile)" =~ ^[Tt][Rr][Uu][Ee]$ ]]; then
-        convert_cmd+=(-size 1024x576 "tile:")
+        convert_cmd+=(-size "${WIDTH}x${HEIGHT}" "tile:")
     else
-        convert_cmd+=(-resize 'x576' " ") # the trailing space is needed
+        convert_cmd+=(-resize "x${HEIGHT}" " ") # the trailing space is needed
     fi
     
     ${convert_cmd[@]}"$background" "$TMP_LAUNCHING" || return $?
@@ -611,7 +648,7 @@ function prepare_background() {
         convert "$TMP_LAUNCHING" \
           -fill white \
           -gravity center \
-          -region '1024x190' \
+          -region "${WIDTH}x190" \
           -colorize 40,40,40 \
           "$TMP_LAUNCHING"
     fi
@@ -631,7 +668,7 @@ function add_logo() {
     fi
 
     convert -background none \
-      -resize "450x176" \
+      -resize "450x" \
       "$logo" "$TMP_LOGO"
     
     if ! [[ -f "$TMP_LOGO" ]]; then
@@ -693,6 +730,8 @@ if ! get_systems; then
 fi
 
 proceed
+
+detect_aspect_ratio
 
 for SYSTEM in "${SYSTEMS_ARRAY[@]}"; do
     dialog \
