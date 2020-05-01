@@ -314,10 +314,10 @@ function detect_aspect_ratio() {
 
     width="$(cut -d 'x' -f1 <<< "$resolution")"
     height="$(cut -d 'x' -f2 <<< "$resolution")"
-    aspectRatio="$(( $width * 10 / $height ))" # no quotes is mandatory!
+    aspectRatio="$(( $width * 100 / $height ))" # no quotes is mandatory!
 
-    # an aspecRatio = 13 means 4:3
-    [[ "$aspectRatio" == "13" ]] && WIDTH="768"
+    # an aspecRatio = 133 means 4:3
+    [[ "$aspectRatio" -le 133 ]] && WIDTH="768"
 }
 
 
