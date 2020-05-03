@@ -310,7 +310,7 @@ function detect_aspect_ratio() {
     fi
 
     # if unable to detect the resolution, just use the default ones
-    [[ "$resolution" =~ [0-9]+x[0-9]+ ]] && return
+    [[ "$resolution" =~ [0-9]+x[0-9]+ ]] || return
 
     width="$(cut -d 'x' -f1 <<< "$resolution")"
     height="$(cut -d 'x' -f2 <<< "$resolution")"
