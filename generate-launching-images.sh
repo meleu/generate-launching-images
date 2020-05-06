@@ -299,7 +299,7 @@ function detect_aspect_ratio() {
     # running on X
     if [[ "$IS_RUNNING_X" == true ]]; then
         # from https://superuser.com/a/1207339
-        resolution="$(xrandr --current | sed -n 's/.* connected \([0-9]\+\)x\([0-9]\+\)+.*/\1x\2/p')"
+        resolution="$(xrandr --current | sed -n 's/.* connected [a-z ]*\([0-9]\+\)x\([0-9]\+\)+.*/\1x\2/p')"
     else # running on a raspi
         local resFile="/sys/class/graphics/fb0/virtual_size"
         if [[ -f "$resFile" ]]; then
@@ -314,10 +314,8 @@ function detect_aspect_ratio() {
 
     width="$(cut -d 'x' -f1 <<< "$resolution")"
     height="$(cut -d 'x' -f2 <<< "$resolution")"
-    aspectRatio="$(( $width * 100 / $height ))" # no quotes is mandatory!
-
-    # an aspecRatio = 133 means 4:3
-    [[ "$aspectRatio" -le 133 ]] && WIDTH="768"
+    aspectRatio="$(( width * 1000 / height ))"
+    WIDTH="$(( HEIGHT * aspectRatio / 1000 ))"
 }
 
 
@@ -668,7 +666,7 @@ function add_logo() {
     fi
 
     convert -background none \
-      -resize "450x" \
+      -resize "450x176" \
       "$logo" "$TMP_LOGO"
     
     if ! [[ -f "$TMP_LOGO" ]]; then
